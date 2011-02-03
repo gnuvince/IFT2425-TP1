@@ -17,13 +17,13 @@ float** fmatrix_allocate_2d(int vsize,int hsize) {
     float** matrix;
     float *imptr;
 
-    matrix=(float**)malloc(sizeof(float*)*vsize);
+    matrix=(float**)calloc(vsize, sizeof(float*));
     if (matrix==NULL) printf("probleme d'allocation memoire");
 
-    imptr=(float*)malloc(sizeof(float)*hsize*vsize);
+    imptr=(float*)calloc(hsize*vsize, sizeof(float));
     if (imptr==NULL) printf("probleme d'allocation memoire");
 
-    for(i=0;i<vsize;i++,imptr+=hsize) matrix[i]=imptr;
+    for(i=0; i<vsize; i++,imptr+=hsize) matrix[i]=imptr;
     return matrix;
 }
 
@@ -41,7 +41,6 @@ void MakeTridiagonalMatrix(int n, float** matrix) {
         for (int j = 0; j < n; ++j) {
             if (i == j) matrix[i][j] = 2.0;
             else if (i == j+1 || j == i+1) matrix[i][j] = -1.0;
-            else matrix[i][j] = 0.0;
         }
     }
 }
@@ -68,6 +67,60 @@ void PrintMatrix(int n, int m, float **matrix) {
 
 float force(float x) {
     return x * (x - 1);
+}
+
+
+int FindMaxCoefficient(float** A, int col) {
+    double max = abs(A[col][col]);
+    for (int row = col+1; row < SIZE; ++row) {
+        double x = abs(A[row][col]);
+        if (x > max) max = x;
+    }
+    return max;
+}
+
+
+void Swap(float* vect, int i, int j) {
+    float tmp = vect[i];
+    vect[i] = vect[j];
+    vect[j] = tmp;
+}
+
+
+void SwapRows(float** A, int i, int j) {
+    float* tmp = A[i];
+    A[i] = A[j];
+    A[j] = tmp;
+}
+
+/*
+  A: la matrice à factoriser
+  L: paramètre sortant contenant la matrice L
+  U: paramètre sortant contenant la matrice U
+  pvect: paramètre sortant contenant le vecteur des permutations
+ */
+void PLUFactorize(float** A, float** L, float** U, float* pvect) {
+    /* Initialiser pvect */
+    for (int i = 0; i < SIZE; ++i)
+        pvect[i] = (float)i;
+
+    for (int i = 0; i < SIZE; ++i) {
+        /* Échanger la ligne courante avec celle possédant le plus
+         * grand pivot (en valeur absolue). */
+        int pivot_index = FindMaxCoefficient(A, i);
+        Swap(pvect, i, pivot_index);
+        SwapRows(A, i, pivot_index);
+
+        /* Transcrire dans L le contenu de la colonne courante et
+         * faire la division par le pivot. */
+        float pivot = A[i][i];
+        for (int j = i; j < SIZE; j++) {
+            L[j][i] = A[j][i] / pivot;
+        }
+
+
+        /* Appliquer Gauss aux autres lignes. */
+    }
 }
 
 
