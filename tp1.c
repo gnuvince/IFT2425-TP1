@@ -105,12 +105,11 @@ void ReplaceLine(float** A, int dim, int pivot_line, int replaced_line, float pi
 }
 
 /*
-  A: la matrice à factoriser
-  L: paramètre sortant contenant la matrice L
-  U: paramètre sortant contenant la matrice U
+  A: la matrice à factoriser; A va devenir la matrice triangulaire supérieure U.
+  L: paramètre sortant contenant la matrice triangulaire inférieure L.
   pvect: paramètre sortant contenant le vecteur des permutations
  */
-void PLUFactorize(float** A, int dim, float** L, float** U, int* pvect) {
+void PLUFactorize(float** A, int dim, float** L, int* pvect) {
     /* Initialiser pvect */
     for (int i = 0; i < dim; ++i)
         pvect[i] = i;
@@ -136,6 +135,14 @@ void PLUFactorize(float** A, int dim, float** L, float** U, int* pvect) {
     }
 }
 
+/* P must be zeroed out. */
+void MakePermutationMatrix(int* pvect, int dim, float** P) {
+    for (int i = 0; i < dim; ++i) {
+        int j = pvect[i];
+        P[i][j] = 1;
+    }
+}
+
 
 int main(void) {
     /*
@@ -157,6 +164,7 @@ int main(void) {
 
     float** A = fmatrix_allocate_2d(3, 3);
     float** L = fmatrix_allocate_2d(3, 3);
+    float** P = fmatrix_allocate_2d(3, 3);
     int pvect[3];
 
     A[0][0] = 1;
@@ -174,16 +182,14 @@ int main(void) {
 
     putchar('\n');
 
-    PLUFactorize(A, 3, L, NULL, pvect);
+    PLUFactorize(A, 3, L, pvect);
+    MakePermutationMatrix(pvect, 3, P);
     PrintMatrix(3, 3, A);
     PrintMatrix(3, 3, L);
+    PrintMatrix(3, 3, P);
     for (int i = 0; i < 3; ++i)
         printf("%d ", pvect[i]);
     putchar('\n');
-
-    free_fmatrix_2d(A);
-    free_fmatrix_2d(L);
-
 
     return 0;
 }
