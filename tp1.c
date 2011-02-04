@@ -100,7 +100,7 @@ void SwapRows(float** A, int i, int j) {
 
 void ReplaceLine(float** A, int dim, int pivot_line, int replaced_line, float pivot, float k) {
     for (int col = pivot_line; col < dim; ++col) {
-        A[replaced_line][col] = pivot*A[replaced_line][col] - k*A[pivot_line][col];
+        A[replaced_line][col] = A[replaced_line][col] - (k/pivot)*A[pivot_line][col];
     }
 }
 
@@ -140,6 +140,28 @@ void MakePermutationMatrix(int* pvect, int dim, float** P) {
     for (int i = 0; i < dim; ++i) {
         int j = pvect[i];
         P[i][j] = 1;
+    }
+}
+
+
+void SolveForward(float** A, int dim, float** x, float** b) {
+    for (int i = 0; i < dim; ++i) {
+        float sum = 0.0;
+        for (int j = 0; j < i; ++j) {
+            sum += A[i][j] * x[j][0];
+        }
+        x[i][0] = (b[i][0] - sum) / A[i][i];
+    }
+}
+
+
+void SolveBackward(float** A, int dim, float** x, float** b) {
+    for (int i = dim - 1; i >= 0; --i) {
+        float sum = 0.0;
+        for (int j = i+1; j < dim; j++) {
+            sum += A[i][j] * x[j][0];
+        }
+        x[i][0] = (b[i][0] - sum) / A[i][i];
     }
 }
 
@@ -190,6 +212,24 @@ int main(void) {
     for (int i = 0; i < 3; ++i)
         printf("%d ", pvect[i]);
     putchar('\n');
+
+    printf("----\n");
+
+    float** b = fmatrix_allocate_2d(3, 1);
+    float** x = fmatrix_allocate_2d(3, 1);
+    float** y = fmatrix_allocate_2d(3, 1);
+
+    b[0][0] = 18;
+    b[1][0] = 18;
+    b[2][0] = 6;
+
+    SolveForward(L, 3, y, b);
+
+    PrintMatrix(3, 1, y);
+
+    SolveBackward(A, 3, x, y);
+
+    PrintMatrix(3, 1, x);
 
     return 0;
 }
