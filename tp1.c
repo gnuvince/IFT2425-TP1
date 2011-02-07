@@ -9,8 +9,15 @@
 
 #define N 20
 #define SIZE (N-1)
+#define PI 3.14159265358979323846
 
-
+/*
+  Structure pour représenter une matrice:
+  - elems: pointeurs vers les rangées
+  - start: pointeur vers le début des données
+           (pour libérer la mémoire et copier les données)
+  - rows, cols: dimensions de la matrice.
+ */
 typedef struct {
     float** elems;
     float*  start;
@@ -18,23 +25,24 @@ typedef struct {
 } matrix_t;
 
 
-
+/* Allocation dynamique d'une nouvelle matrice.  Tous les éléments
+ * sont initialisés à 0. */
 matrix_t* NewMatrix(int rows, int cols) {
     matrix_t* m = malloc(sizeof(matrix_t));
     if (m == NULL) {
-        fprintf(stderr, "not enough memory\n");
+        fprintf(stderr, "memoire insuffisante\n");
         abort();
     }
 
     float** elems = malloc(sizeof(float*) * rows);
     if (elems == NULL) {
-        fprintf(stderr, "not enough memory\n");
+        fprintf(stderr, "memoire insuffisante\n");
         abort();
     }
 
     float* data = calloc(rows*cols, sizeof(float));
     if (data == NULL) {
-        fprintf(stderr, "not enough memory\n");
+        fprintf(stderr, "memoire insuffisante\n");
         abort();
     }
 
@@ -50,7 +58,7 @@ matrix_t* NewMatrix(int rows, int cols) {
     return m;
 }
 
-
+/* Libération de la mémoire utilisée par une matrice. */
 void FreeMatrix(matrix_t* m) {
     free(m->start);
     free(m->elems);
@@ -58,7 +66,14 @@ void FreeMatrix(matrix_t* m) {
 }
 
 
-
+/* Créer une matrice ayant le format tri-diagonal:
+  2  -1  0 ... 0
+  -1  2 -1 ... 0
+  0  -1  2 ... 0
+  .
+  .
+  0 ...   0 -1 2
+ */
 void MakeTridiagonalMatrix(matrix_t* matrix) {
     // Do nothing if the matrix isn't square.
     if (matrix->rows != matrix->cols)
@@ -73,6 +88,8 @@ void MakeTridiagonalMatrix(matrix_t* matrix) {
 }
 
 
+/* Populer un vecteur en appliquant le pointeur de fonction f aux
+ * éléments de l'intervalle {1/N, 2/N, ..., (N-1)/N} */
 void MakeBVector(float (*f)(float), matrix_t* vector) {
     float h = 1.0/N;
 
@@ -81,6 +98,7 @@ void MakeBVector(float (*f)(float), matrix_t* vector) {
 }
 
 
+/* Afficher une matrice. */
 void PrintMatrix(matrix_t* matrix) {
     for (int i = 0; i < matrix->rows; ++i) {
         for (int j = 0; j < matrix->cols; ++j) {
@@ -93,11 +111,9 @@ void PrintMatrix(matrix_t* matrix) {
 
 
 
-float force(float x) {
-    return x * (x - 1);
-}
-
-
+/* Trouver le plus grand coefficient d'une colonne en valeur absolue.
+ * Le coefficient est recherché à partir de la ligne correspondant à
+ * la colonne (ex. ligne 3, colonne 3). */
 int FindMaxCoefficient(matrix_t* A, int col) {
     int max_row = col;
     float max = fabsf(A->elems[col][col]);
@@ -112,6 +128,7 @@ int FindMaxCoefficient(matrix_t* A, int col) {
 }
 
 
+/* Échanger deux entiers dans un int[] */
 void Swap(int* vect, int i, int j) {
     int tmp = vect[i];
     vect[i] = vect[j];
@@ -119,18 +136,25 @@ void Swap(int* vect, int i, int j) {
 }
 
 
+/* Échanger deux rangées dans une matrices en échangeant leurs
+ * pointeurs. */
 void SwapRows(matrix_t* A, int i, int j) {
     float* tmp = A->elems[i];
     A->elems[i] = A->elems[j];
     A->elems[j] = tmp;
 }
 
+
+/* Faire un remplacement de ligne sans faire de cadrage (nécessaire
+ * pour la factorisation LU). */
 void ReplaceLine(matrix_t* M, int pivot_line, int replaced_line, float pivot, float k) {
     for (int col = pivot_line; col < M->cols; ++col) {
         M->elems[replaced_line][col] = M->elems[replaced_line][col] - (k/pivot)*M->elems[pivot_line][col];
     }
 }
 
+
+/* Copier les données d'une matrice dans une autre. */
 void CopyMatrix(matrix_t* dst, matrix_t* src) {
     if (src->rows != dst->rows || src->cols != dst->cols)
         return;
@@ -138,7 +162,7 @@ void CopyMatrix(matrix_t* dst, matrix_t* src) {
     memcpy(dst->start, src->start, sizeof(float) * src->rows * src->cols);
 }
 
-/*
+/* Faire une factorisation PLU d'une matrice A.
   A: la matrice à factoriser
   U: paramètre sortant contenant la matrice triangulaire supérieure U.
   L: paramètre sortant contenant la matrice triangulaire inférieure L.
@@ -173,7 +197,10 @@ void PLUFactorize(matrix_t* A, matrix_t* L, matrix_t* U, int* pvect) {
     }
 }
 
-/* P must be zeroed out. */
+
+/* À l'aide d'un vecteur des permutations, créer la matrice des
+ * permutations.
+ * N.B.: P doit contenur que des 0 initialement. */
 void MakePermutationMatrix(int* pvect, matrix_t* P) {
     for (int i = 0; i < P->rows; ++i) {
         int j = pvect[i];
@@ -182,6 +209,7 @@ void MakePermutationMatrix(int* pvect, matrix_t* P) {
 }
 
 
+/* Résolution par le bas d'un système triangulaire inférieur. */
 void SolveForward(matrix_t* A, matrix_t* x, matrix_t* b) {
     for (int i = 0; i < A->rows; ++i) {
         float sum = 0.0;
@@ -192,7 +220,7 @@ void SolveForward(matrix_t* A, matrix_t* x, matrix_t* b) {
     }
 }
 
-
+/* Résolution par le haut d'un système triangulaire supérieur. */
 void SolveBackward(matrix_t* A, matrix_t* x, matrix_t* b) {
     for (int i = A->rows - 1; i >= 0; --i) {
         float sum = 0.0;
@@ -204,6 +232,7 @@ void SolveBackward(matrix_t* A, matrix_t* x, matrix_t* b) {
 }
 
 
+/* Résoudre Ax = b à l'aide de la factorisation PLU. x, L, U et pvect seront modifiés. */
 void SolvePLU(matrix_t* A, matrix_t* x, matrix_t* b, matrix_t* L, matrix_t* U, int* pvect) {
     matrix_t* y = NewMatrix(x->rows, 1);
 
@@ -215,63 +244,54 @@ void SolvePLU(matrix_t* A, matrix_t* x, matrix_t* b, matrix_t* L, matrix_t* U, i
 }
 
 
+
+/* Fonction de la question 1. */
+float force(float x) {
+    return x * (x - 1);
+}
+
+
+/* Fonction de la question 2. */
+float force2(float x) {
+    float y = 2 * PI * x;
+    return x * sin(y * y);
+}
+
+
 int main(void) {
-    /*
-    float** matrix = fmatrix_allocate_2d(SIZE, SIZE);
-    float** vector = fmatrix_allocate_2d(SIZE, 1);
-    float (*f)(float) = &force;
+    matrix_t* A = NewMatrix(SIZE, SIZE);
+    matrix_t* b = NewMatrix(SIZE, 1);
+    float (*f)(float) = &force2;
 
 
-    MakeTridiagonalMatrix(matrix);
-    MakeBVector(f, vector);
+    MakeTridiagonalMatrix(A);
+    MakeBVector(f, b);
 
-    PrintMatrix(SIZE, SIZE, matrix);
-    PrintMatrix(SIZE, 1, vector);
-
-    free_fmatrix_2d(matrix);
-    free_fmatrix_2d(vector);
-    */
+    PrintMatrix(A);
+    PrintMatrix(b);
 
 
-    matrix_t* A = NewMatrix(3, 3);
-    matrix_t* L = NewMatrix(3, 3);
-    matrix_t* U = NewMatrix(3, 3);
-    matrix_t* P = NewMatrix(3, 3);
-    int pvect[3];
-
-
-    A->elems[0][0] = 1;
-    A->elems[0][1] = 3;
-    A->elems[0][2] = 6;
-    A->elems[1][0] = 2;
-    A->elems[1][1] = 4;
-    A->elems[1][2] = 4;
-    A->elems[2][0] = 3;
-    A->elems[2][1] = 3;
-    A->elems[2][2] = 3;
-
-    matrix_t* b = NewMatrix(3, 1);
-    matrix_t* x = NewMatrix(3, 1);
-
-    b->elems[0][0] = 18;
-    b->elems[1][0] = 18;
-    b->elems[2][0] = 6;
+    matrix_t* L = NewMatrix(SIZE, SIZE);
+    matrix_t* U = NewMatrix(SIZE, SIZE);
+    matrix_t* P = NewMatrix(SIZE, SIZE);
+    matrix_t* x = NewMatrix(SIZE, 1);
+    int pvect[SIZE];
 
     SolvePLU(A, x, b, L, U, pvect);
     MakePermutationMatrix(pvect, P);
 
-    PrintMatrix(A);
     PrintMatrix(L);
     PrintMatrix(U);
     PrintMatrix(P);
     PrintMatrix(x);
 
     FreeMatrix(A);
+    FreeMatrix(b);
     FreeMatrix(L);
     FreeMatrix(U);
     FreeMatrix(P);
-    FreeMatrix(b);
     FreeMatrix(x);
+
 
     return 0;
 }
