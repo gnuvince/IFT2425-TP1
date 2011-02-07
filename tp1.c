@@ -2,6 +2,7 @@
 /* Vincent Foley-Bourgon (FOLV08078309) */
 /* Eric Thivierge (THIE09016601) */
 
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -87,6 +88,7 @@ void PrintMatrix(matrix_t* matrix) {
         }
         putchar('\n');
     }
+    putchar('\n');
 }
 
 
@@ -123,39 +125,50 @@ void SwapRows(matrix_t* A, int i, int j) {
     A->elems[j] = tmp;
 }
 
-void ReplaceLine(matrix_t* A, int pivot_line, int replaced_line, float pivot, float k) {
-    for (int col = pivot_line; col < A->cols; ++col) {
-        A->elems[replaced_line][col] = A->elems[replaced_line][col] - (k/pivot)*A->elems[pivot_line][col];
+void ReplaceLine(matrix_t* M, int pivot_line, int replaced_line, float pivot, float k) {
+    for (int col = pivot_line; col < M->cols; ++col) {
+        M->elems[replaced_line][col] = M->elems[replaced_line][col] - (k/pivot)*M->elems[pivot_line][col];
     }
 }
 
+void CopyMatrix(matrix_t* dst, matrix_t* src) {
+    if (src->rows != dst->rows || src->cols != dst->cols)
+        return;
+
+    memcpy(dst->start, src->start, sizeof(float) * src->rows * src->cols);
+}
+
 /*
-  A: la matrice à factoriser; A va devenir la matrice triangulaire supérieure U.
+  A: la matrice à factoriser
+  U: paramètre sortant contenant la matrice triangulaire supérieure U.
   L: paramètre sortant contenant la matrice triangulaire inférieure L.
   pvect: paramètre sortant contenant le vecteur des permutations
  */
-void PLUFactorize(matrix_t* A, matrix_t* L, int* pvect) {
+void PLUFactorize(matrix_t* A, matrix_t* L, matrix_t* U, int* pvect) {
     /* Initialiser pvect */
     for (int i = 0; i < A->rows; ++i)
         pvect[i] = i;
 
-    for (int i = 0; i < A->rows; ++i) {
+    /* Copier les éléments de A dans U. */
+    CopyMatrix(U, A);
+
+    for (int i = 0; i < U->rows; ++i) {
         /* Échanger la ligne courante avec celle possédant le plus
          * grand pivot (en valeur absolue). */
-        int pivot_index = FindMaxCoefficient(A, i);
+        int pivot_index = FindMaxCoefficient(U, i);
         Swap(pvect, i, pivot_index);
-        SwapRows(A, i, pivot_index);
+        SwapRows(U, i, pivot_index);
 
         /* Transcrire dans L le contenu de la colonne courante et
          * faire la division par le pivot. */
-        float pivot = A->elems[i][i];
-        for (int j = i; j < A->rows; j++) {
-            L->elems[j][i] = A->elems[j][i] / pivot;
+        float pivot = U->elems[i][i];
+        for (int j = i; j < U->rows; j++) {
+            L->elems[j][i] = U->elems[j][i] / pivot;
         }
 
         /* Appliquer Gauss aux autres lignes. */
-        for (int row = i+1; row < A->rows; ++row) {
-            ReplaceLine(A, i, row, pivot, A->elems[row][i]);
+        for (int row = i+1; row < U->rows; ++row) {
+            ReplaceLine(U, i, row, pivot, U->elems[row][i]);
         }
     }
 }
@@ -191,6 +204,17 @@ void SolveBackward(matrix_t* A, matrix_t* x, matrix_t* b) {
 }
 
 
+void SolvePLU(matrix_t* A, matrix_t* x, matrix_t* b, matrix_t* L, matrix_t* U, int* pvect) {
+    matrix_t* y = NewMatrix(x->rows, 1);
+
+    PLUFactorize(A, L, U, pvect);
+    SolveForward(L, y, b);
+    SolveBackward(U, x, y);
+
+    FreeMatrix(y);
+}
+
+
 int main(void) {
     /*
     float** matrix = fmatrix_allocate_2d(SIZE, SIZE);
@@ -211,6 +235,7 @@ int main(void) {
 
     matrix_t* A = NewMatrix(3, 3);
     matrix_t* L = NewMatrix(3, 3);
+    matrix_t* U = NewMatrix(3, 3);
     matrix_t* P = NewMatrix(3, 3);
     int pvect[3];
 
@@ -225,45 +250,28 @@ int main(void) {
     A->elems[2][1] = 3;
     A->elems[2][2] = 3;
 
-    PrintMatrix(A);
-    PrintMatrix(L);
-
-    putchar('\n');
-
-    PLUFactorize(A, L, pvect);
-    MakePermutationMatrix(pvect, P);
-    PrintMatrix(A);
-    PrintMatrix(L);
-    PrintMatrix(P);
-    for (int i = 0; i < 3; ++i)
-        printf("%d ", pvect[i]);
-    putchar('\n');
-
-    printf("----\n");
-
     matrix_t* b = NewMatrix(3, 1);
     matrix_t* x = NewMatrix(3, 1);
-    matrix_t* y = NewMatrix(3, 1);
 
     b->elems[0][0] = 18;
     b->elems[1][0] = 18;
     b->elems[2][0] = 6;
 
-    SolveForward(L, y, b);
+    SolvePLU(A, x, b, L, U, pvect);
+    MakePermutationMatrix(pvect, P);
 
-    PrintMatrix(y);
-
-    SolveBackward(A, x, y);
-
+    PrintMatrix(A);
+    PrintMatrix(L);
+    PrintMatrix(U);
+    PrintMatrix(P);
     PrintMatrix(x);
-
 
     FreeMatrix(A);
     FreeMatrix(L);
+    FreeMatrix(U);
     FreeMatrix(P);
     FreeMatrix(b);
     FreeMatrix(x);
-    FreeMatrix(y);
 
     return 0;
 }
