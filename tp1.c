@@ -1,4 +1,4 @@
-/* IFT2425 - TP1 */
+/*  IFT2425 - TP1 */
 /* Vincent Foley-Bourgon (FOLV08078309) */
 /* Eric Thivierge (THIE09016601) */
 
@@ -257,19 +257,52 @@ float force2(float x) {
     return x * sin(y * y);
 }
 
+void MatMult(matrix_t* A, matrix_t* B, matrix_t* C) {
+  if ((A->cols != B->rows) || (C->rows != A->rows) || (C->cols != B->cols))
+    return;
+
+  for (int i = 0; i < A->rows; i++)
+    for (int j = 0; j < B->cols; j++) {
+      int temp = 0;
+      for (int k = 0; k < B->rows; k++)
+        temp += A->elems[i][k] * B->elems[k][j];
+      C->elems[i][j] = temp;
+    }
+}
+
+matrix_t* MakeI(int n) {
+  matrix_t* I = NewMatrix(n, n);
+
+  for (int i = 0; i < n; i++)
+    I->elems[i][i] = 1;
+
+  return I;
+}
+
+int MatEq(matrix_t* A, matrix_t* B) {
+  if ((A->rows != B-> rows) || (A->cols != B->cols))
+    return 0;
+
+  for (int i = 0; i < A->rows; i++)
+    for (int j = 0; j < A->cols; j++)
+      if (A->elems[i][j] != B->elems[i][j])
+        return 0;
+
+  return 1;
+}
+
 
 int main(void) {
     matrix_t* A = NewMatrix(SIZE, SIZE);
+    matrix_t* LU = NewMatrix(SIZE, SIZE);
     matrix_t* b = NewMatrix(SIZE, 1);
     float (*f)(float) = &force2;
-
 
     MakeTridiagonalMatrix(A);
     MakeBVector(f, b);
 
     PrintMatrix(A);
-    PrintMatrix(b);
-
+/*     PrintMatrix(b); */
 
     matrix_t* L = NewMatrix(SIZE, SIZE);
     matrix_t* U = NewMatrix(SIZE, SIZE);
@@ -282,16 +315,20 @@ int main(void) {
 
     PrintMatrix(L);
     PrintMatrix(U);
-    PrintMatrix(P);
-    PrintMatrix(x);
+    MatMult(L, U, LU);
+    PrintMatrix(LU);
+    printf("%d\n", MatEq(A, LU));    
+    
+/*     PrintMatrix(P); */
+/*     PrintMatrix(x); */
 
     FreeMatrix(A);
     FreeMatrix(b);
     FreeMatrix(L);
     FreeMatrix(U);
+    FreeMatrix(LU)
     FreeMatrix(P);
     FreeMatrix(x);
-
 
     return 0;
 }
