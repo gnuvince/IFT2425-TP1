@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#define N 20
+#define N 4
 #define SIZE (N-1)
 #define PI 3.14159265358979323846
 
@@ -237,6 +237,15 @@ void SolvePLU(matrix_t* A, matrix_t* x, matrix_t* b, matrix_t* L, matrix_t* U, i
     matrix_t* y = NewMatrix(x->rows, 1);
 
     PLUFactorize(A, L, U, pvect);
+
+    /* Permuter b selon pvect. */
+    matrix_t* b2 = NewMatrix(b->rows, 1);
+    for (int i = 0; i < b->rows; ++i) {
+        b2->elems[i][0] = b->elems[pvect[i]][0];
+    }
+    CopyMatrix(b, b2);
+    FreeMatrix(b2);
+
     SolveForward(L, y, b);
     SolveBackward(U, x, y);
 
@@ -294,47 +303,28 @@ int MatrixEq(matrix_t* A, matrix_t* B) {
 
 int main(void) {
     matrix_t* A = NewMatrix(SIZE, SIZE);
-    matrix_t* LU = NewMatrix(SIZE, SIZE);
-    matrix_t* b = NewMatrix(SIZE, 1);
-    float (*f)(float) = &force;
-
-    MakeTridiagonalMatrix(A);
-    MakeBVector(f, b);
-
-
-    PrintMatrix(A);
-/*     PrintMatrix(b); */
-
     matrix_t* L = NewMatrix(SIZE, SIZE);
     matrix_t* U = NewMatrix(SIZE, SIZE);
     matrix_t* P = NewMatrix(SIZE, SIZE);
     matrix_t* x = NewMatrix(SIZE, 1);
+    matrix_t* b = NewMatrix(SIZE, 1);
     int pvect[SIZE];
 
+    MakeTridiagonalMatrix(A);
+    MakeBVector(&force, b);
+
     SolvePLU(A, x, b, L, U, pvect);
-    PrintMatrix(L);
-    PrintMatrix(U);
-
-
     MakePermutationMatrix(pvect, P);
-
-    PrintMatrix(L);
-    PrintMatrix(U);
-    MatrixMult(L, U, LU);
-    PrintMatrix(LU);
-    printf("%d\n", MatrixEq(A, LU));
-    exit(0);
 
     PrintMatrix(P);
     PrintMatrix(x);
 
-    FreeMatrix(A);
     FreeMatrix(b);
-    FreeMatrix(L);
-    FreeMatrix(U);
-    FreeMatrix(LU);
-    FreeMatrix(P);
     FreeMatrix(x);
+    FreeMatrix(P);
+    FreeMatrix(U);
+    FreeMatrix(L);
+    FreeMatrix(A);
 
     return 0;
 }
