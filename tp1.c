@@ -1,4 +1,4 @@
-/*  IFT2425 - TP1 */
+/* IFT2425 - TP1 */
 /* Vincent Foley-Bourgon (FOLV08078309) */
 /* Eric Thivierge (THIE09016601) */
 
@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#define N 4
+#define N 20
 #define SIZE (N-1)
 #define PI 3.14159265358979323846
 
@@ -233,10 +233,8 @@ void SolveBackward(matrix_t* A, matrix_t* x, matrix_t* b) {
 
 
 /* Résoudre Ax = b à l'aide de la factorisation PLU. x, L, U et pvect seront modifiés. */
-void SolvePLU(matrix_t* A, matrix_t* x, matrix_t* b, matrix_t* L, matrix_t* U, int* pvect) {
+void SolvePLU(matrix_t* L, matrix_t* U, int* pvect, matrix_t* x, matrix_t* b) {
     matrix_t* y = NewMatrix(x->rows, 1);
-
-    PLUFactorize(A, L, U, pvect);
 
     /* Permuter b selon pvect. */
     matrix_t* b2 = NewMatrix(b->rows, 1);
@@ -266,40 +264,6 @@ float force2(float x) {
     return x * sin(y * y);
 }
 
-void MatrixMult(matrix_t* A, matrix_t* B, matrix_t* C) {
-    if ((A->cols != B->rows) || (C->rows != A->rows) || (C->cols != B->cols))
-        return;
-
-    for (int i = 0; i < A->rows; i++)
-        for (int j = 0; j < B->cols; j++) {
-            float temp = 0;
-            for (int k = 0; k < B->rows; k++)
-                temp += A->elems[i][k] * B->elems[k][j];
-            C->elems[i][j] = temp;
-        }
-}
-
-matrix_t* MakeI(int n) {
-  matrix_t* I = NewMatrix(n, n);
-
-  for (int i = 0; i < n; i++)
-    I->elems[i][i] = 1;
-
-  return I;
-}
-
-int MatrixEq(matrix_t* A, matrix_t* B) {
-  if ((A->rows != B-> rows) || (A->cols != B->cols))
-    return 0;
-
-  for (int i = 0; i < A->rows; i++)
-    for (int j = 0; j < A->cols; j++)
-      if (A->elems[i][j] != B->elems[i][j])
-        return 0;
-
-  return 1;
-}
-
 
 int main(void) {
     matrix_t* A = NewMatrix(SIZE, SIZE);
@@ -313,10 +277,32 @@ int main(void) {
     MakeTridiagonalMatrix(A);
     MakeBVector(&force, b);
 
-    SolvePLU(A, x, b, L, U, pvect);
-    MakePermutationMatrix(pvect, P);
+    puts("MATRICE A");
+    PrintMatrix(A);
+    puts("VECTEUR B1");
+    PrintMatrix(b);
 
+    PLUFactorize(A, L, U, pvect);
+    MakePermutationMatrix(pvect, P);
+    SolvePLU(L, U, pvect, x, b);
+
+    puts("MATRICE L");
+    PrintMatrix(L);
+    puts("MATRICE U");
+    PrintMatrix(U);
+    puts("MATRICE P");
     PrintMatrix(P);
+
+    puts("SOLUTION POUR FORCE 1");
+    PrintMatrix(x);
+
+
+    MakeBVector(&force2, b);
+    puts("VECTEUR B2");
+    PrintMatrix(b);
+    SolvePLU(L, U, pvect, x, b);
+
+    puts("SOLUTION POUR FORCE 2");
     PrintMatrix(x);
 
     FreeMatrix(b);

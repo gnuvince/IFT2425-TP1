@@ -1,3 +1,5 @@
 core.*
 *.o
 tp1
+*.aux
+*.log
